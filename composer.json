@@ -1,0 +1,59 @@
+{
+  "name": "olegabr/paranoid-ethereum-erc20-wallet",
+  "description": "Simple code to send ERC20 tokens",
+  "type": "project",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/web3.php"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/ethereum-tx"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/ethereum-util"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/php-keccak"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/rlp"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/olegabr/bitcoin-php"
+    }
+  ],
+  "require": {
+    "php": "^7.4",
+    "olegabr/web3.php": "~0.2",
+    "olegabr/ethereum-tx": "^0.5.1",
+    "phpseclib/phpseclib": "3.0.14",
+    "bitwasp/buffertools": "0.5.7",
+    "olegabr/bitcoin": "1.0.7",
+    "guzzlehttp/guzzle": "7.4.2",
+    "composer/semver": "1.7.2",
+    "guzzlehttp/psr7": "1.8.5 || 2.2.1",
+    "guzzlehttp/promises": "1.5.2",
+    "psr/http-client": "1.0.1",
+    "psr/http-factory": "1.0.1",
+    "psr/http-message": "1.0.1",
+    "symfony/deprecation-contracts": "2.5.x-dev"
+  },
+  "autoload": {
+    "psr-4": {
+      "Paranoid\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "EthereumICO",
+      "email": "ethereumicoio@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev"
+}
