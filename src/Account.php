@@ -99,7 +99,7 @@ final class Account
      * get_balance
      *
      * @param  ERC20 $token
-     * @return Wei
+     * @return NativeWei
      */
     function get_balance(NativeCoin $coin): NativeWei
     {

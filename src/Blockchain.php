@@ -40,6 +40,8 @@ final class Blockchain
      */
     private $options;
 
+    private $_address_to_code_cache = [];
+
     /**
      * __construct
      *
@@ -154,26 +156,41 @@ final class Blockchain
      */
     function get_contract_code(Contract $contract): string
     {
-        $ret = null;
-        $err = null;
+        return $this->_get_contract_code($contract->get_contract_address());
+    }
 
-        $this->web3->eth->getCode($contract->get_contract_address()->get_address(), function ($error, $code) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
+    /**
+     * _get_contract_code
+     *
+     * @param  Address $contract_address
+     * @return string
+     * @throws \Exception
+     */
+    private function _get_contract_code(Address $contract_address): string
+    {
+        if (!isset($this->_address_to_code_cache[$contract_address->get_address()])) {
+            $ret = null;
+            $err = null;
+
+            $this->web3->eth->getCode($contract_address->get_address(), function ($error, $code) use (&$ret, &$err) {
+                if ($error !== null) {
+                    $err = $error;
+                    return;
+                }
+                $ret = $code;
+            });
+
+            if (!is_null($err)) {
+                throw new \Exception('Failed to get contract code: ' . $err);
             }
-            $ret = $code;
-        });
 
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get contract code: ' . $err);
+            if (is_null($ret)) {
+                throw new \Exception('Failed to get contract code');
+            }
+            $this->_address_to_code_cache[$contract_address->get_address()] = $ret;
         }
 
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get contract code');
-        }
-
-        return $ret;
+        return $this->_address_to_code_cache[$contract_address->get_address()];
     }
 
     /**
@@ -324,49 +341,6 @@ final class Blockchain
     }
 
     /**
-     * get_gas_price_wei
-     *
-     * @return int
-     */
-    function get_gas_price_wei(): int
-    {
-        $cache_gas_price_wei = $this->_query_gas_price_wei();
-
-        $gasPriceWei = doubleval($cache_gas_price_wei['gas_price']);
-        if (is_null($cache_gas_price_wei['gas_price_tip'])) {
-            // only if pre-EIP1559
-            $gasPriceMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
-
-            if ($gasPriceMaxWei < $gasPriceWei) {
-                $gasPriceWei = $gasPriceMaxWei;
-            }
-        }
-        return intval($gasPriceWei);
-    }
-
-    /**
-     * get_gas_price_tip_wei
-     *
-     * @return int
-     */
-    function get_gas_price_tip_wei(): int
-    {
-        $cache_gas_price_wei = $this->_query_gas_price_wei();
-
-        if (is_null($cache_gas_price_wei['gas_price_tip'])) {
-            return null;
-        }
-
-        $gasPriceTipWei = doubleval($cache_gas_price_wei['gas_price_tip']);
-        $gasPriceTipMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
-
-        if ($gasPriceTipMaxWei < $gasPriceTipWei) {
-            $gasPriceTipWei = $gasPriceTipMaxWei;
-        }
-        return intval($gasPriceTipWei);
-    }
-
-    /**
      * is_eip1559
      *
      * @return bool
@@ -406,15 +380,192 @@ final class Blockchain
     }
 
     /**
-     * get_gas_estimate
+     * make_transaction
      *
-     * @param  mixed $transactionParamsArray
-     * @return string
+     * @param  Account $from
+     * @param  Address $to
+     * @param  TxData $tx_data
+     * @param  NativeWei $tx_value
+     * @return Tx
      * @throws \Exception
+     * @throws \InvalidArgumentException
      */
-    function get_gas_estimate(array $transactionParamsArray): string
+    function make_transaction(Account $from, Address $to, TxData $tx_data, NativeWei $tx_value): Tx
     {
-        return $this->_get_gas_estimate($transactionParamsArray)->toString();
+        $nonce = $this->get_account_nonce($from);
+        $nonceb = \BitWasp\Buffertools\Buffer::int(intval($nonce));
+        $gas_limit = $this->_get_gas_limit($to);
+        $gasLimit = \BitWasp\Buffertools\Buffer::int($gas_limit);
+
+        $data = $tx_data->get_data();
+        $value = $tx_value->get_wei_str();
+        $value_bn = new \phpseclib3\Math\BigInteger($value);
+        $value_hex = $value_bn->toHex();
+        $transactionData = [
+            'from' => $from->get_address()->get_address(),
+            'nonce' => '0x' . $nonceb->getHex(),
+            'to' => strtolower($to->get_address()),
+            'gas' => '0x' . ltrim($gasLimit->getHex(), '0'),
+            'value' => '0x' . (empty($value_hex) ? '0' : $value_hex),
+            'chainId' => $this->get_network_id(),
+            'data' => !empty($data) ? '0x' . $data : null,
+        ];
+
+        if (21000 < $gas_limit) {
+            $gasEstimate = $this->_get_gas_estimate($transactionData);
+            if ($gasLimit->getHex() === $gasEstimate->toHex()) {
+                throw new \Exception("Too low gas_limit option specified: " . $gasLimit->getHex());
+            }
+            $transactionData['gas'] = '0x' . $gasEstimate->toHex();
+        }
+        unset($transactionData['from']);
+
+        $transactionData = array_merge(
+            $transactionData,
+            $this->_get_fee_fields()
+        );
+
+        return self::_make_tx($transactionData);
+    }
+
+    private function _get_gas_limit(Address $to): int
+    {
+        if ('0x' === $this->_get_contract_code($to)) {
+            return 21000;
+        }
+        return intval($this->get_option('gas_limit'));
+    }
+
+    /**
+     * _get_gas_price_wei
+     *
+     * @return int
+     */
+    private function _get_gas_price_wei(): int
+    {
+        $cache_gas_price_wei = $this->_query_gas_price_wei();
+
+        $gasPriceWei = doubleval($cache_gas_price_wei['gas_price']);
+        if (is_null($cache_gas_price_wei['gas_price_tip'])) {
+            // only if pre-EIP1559
+            $gasPriceMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
+
+            if ($gasPriceMaxWei < $gasPriceWei) {
+                $gasPriceWei = $gasPriceMaxWei;
+            }
+        }
+        return intval($gasPriceWei);
+    }
+
+    /**
+     * _get_gas_price_tip_wei
+     *
+     * @return int
+     */
+    private function _get_gas_price_tip_wei(): int
+    {
+        $cache_gas_price_wei = $this->_query_gas_price_wei();
+
+        if (is_null($cache_gas_price_wei['gas_price_tip'])) {
+            return null;
+        }
+
+        $gasPriceTipWei = doubleval($cache_gas_price_wei['gas_price_tip']);
+        $gasPriceTipMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
+
+        if ($gasPriceTipMaxWei < $gasPriceTipWei) {
+            $gasPriceTipWei = $gasPriceTipMaxWei;
+        }
+        return intval($gasPriceTipWei);
+    }
+
+    /**
+     * _get_fee_fields
+     *
+     * @return array
+     * @throws \Exception
+     * @throws \InvalidArgumentException
+     */
+    private function _get_fee_fields(): array
+    {
+        $transactionData = [
+            'chainId' => $this->get_network_id(),
+        ];
+
+        $gasPrice = $this->_get_gas_price_wei();
+        $gasPrice = \BitWasp\Buffertools\Buffer::int(intval($gasPrice));
+
+        if ($this->is_eip1559()) {
+            $transactionData['accessList'] = [];
+            // EIP1559
+            $transactionData['maxFeePerGas'] = '0x' . $gasPrice->getHex();
+
+            $gasPriceTip = $this->_get_gas_price_tip_wei();
+            $gasPriceTip = \BitWasp\Buffertools\Buffer::int(intval($gasPriceTip));
+            $transactionData['maxPriorityFeePerGas'] = '0x' . $gasPriceTip->getHex();
+        } else {
+            // pre-EIP1559
+            $transactionData['gasPrice'] = '0x' . $gasPrice->getHex();
+        }
+
+        return $transactionData;
+    }
+
+    /**
+     * _make_tx
+     *
+     * @param  array $data
+     * @return Tx
+     */
+    private static function _make_tx(array $data): Tx
+    {
+        return new class($data) implements Tx
+        {
+            /**
+             * tx_array
+             *
+             * @var array
+             */
+            private $tx_array;
+
+            /**
+             * __construct
+             *
+             * @param  array $address
+             * @return void
+             */
+            function __construct(array $tx_array)
+            {
+                $this->tx_array = $tx_array;
+            }
+
+            /**
+             * get_tx_array
+             *
+             * @return array
+             */
+            function get_tx_array(): array
+            {
+                return $this->tx_array;
+            }
+            /**
+             * get_tx_cost_estimate
+             *
+             * @return string
+             */
+            function get_tx_cost_estimate(): string
+            {
+                $gas = new \phpseclib3\Math\BigInteger($this->tx_array['gas'], 16);
+                $price = new \phpseclib3\Math\BigInteger(0);
+                if (isset($this->tx_array['gasPrice'])) {
+                    $price = new \phpseclib3\Math\BigInteger($this->tx_array['gasPrice'], 16);
+                } else if (isset($this->tx_array['maxFeePerGas'])) {
+                    $price = new \phpseclib3\Math\BigInteger($this->tx_array['maxFeePerGas'], 16);
+                }
+                $cost = $gas->multiply($price);
+                return $cost->toString();
+            }
+        };
     }
 
     /**
@@ -516,7 +667,7 @@ final class Blockchain
     private function _get_default_gas_price_wei(): array
     {
         $gasPriceMaxGwei = doubleval($this->options['max_gas_price']);
-        return array('gas_price' => intval(floatval($gasPriceMaxGwei) * 1000000000), 'gas_price_tip' => null);
+        return array('gas_price' => intval(ceil(floatval($gasPriceMaxGwei) * 1000000000)), 'gas_price_tip' => null);
     }
 
     /**
