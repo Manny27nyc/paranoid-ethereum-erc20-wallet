@@ -1,5 +1,5 @@
 <?php
-require './vendor/autoload.php';
+require '../vendor/autoload.php';
 require './blockchain.php';
 
 use Paranoid\Account;
