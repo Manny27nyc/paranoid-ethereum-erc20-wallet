@@ -54,6 +54,9 @@ final class Blockchain
      */
     function __construct(string $provider_url, array $options = [])
     {
+        if (empty($provider_url)) {
+            throw new \InvalidArgumentException('Empty provider_url value provided');
+        }
         $this->options = array_merge([
             'gas_limit' => 200000,
             'max_gas_price' => 21,
@@ -63,6 +66,16 @@ final class Blockchain
         $this->web3 = new \Web3\Web3($this->http_provider);
         $this->network_id = $this->_get_network_id();
         $this->_is_eip1559 = $this->_is_eip1559();
+    }
+
+    /**
+     * get_provider_url
+     *
+     * @return string
+     */
+    function get_provider_url(): string
+    {
+        return $this->http_provider->getRequestManager()->getHost();
     }
 
     /**
@@ -311,53 +324,6 @@ final class Blockchain
     }
 
     /**
-     * Get the HttpProvider connection object
-     *
-     * @param  string $provider_url
-     * @param  int $network_timeout
-     * @return \Web3\Providers\HttpProvider
-     */
-    private function _get_provider(string $provider_url, int $network_timeout): \Web3\Providers\HttpProvider
-    {
-        $requestManager = new \Web3\RequestManagers\HttpRequestManager($provider_url, $network_timeout);
-        $_httpProvider = new \Web3\Providers\HttpProvider($requestManager);
-        return $_httpProvider;
-    }
-
-    /**
-     * _get_network_id
-     *
-     * @return int
-     * @throws \Exception
-     */
-    private function _get_network_id(): int
-    {
-        $ret = null;
-        $err = null;
-
-        $web3 = new \Web3\Web3($this->http_provider);
-        $net = $web3->net;
-        $net->version(function ($error, $version) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = intval($version);
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get network id: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get network id');
-        }
-
-        $ret = intval($ret);
-        return $ret;
-    }
-
-    /**
      * get_gas_price_wei
      *
      * @return int
@@ -398,73 +364,6 @@ final class Blockchain
             $gasPriceTipWei = $gasPriceTipMaxWei;
         }
         return intval($gasPriceTipWei);
-    }
-
-    /**
-     * _query_gas_price_wei
-     *
-     * @return array
-     */
-    private function _query_gas_price_wei(): array
-    {
-        $gasPriceWei = null;
-        $gasPriceTipWei = null;
-        $default_gas_price_wei = $this->_get_default_gas_price_wei();
-
-        $isEIP1559 = $this->is_eip1559();
-        if (!$isEIP1559) {
-            $gasPriceWei = $this->query_web3_gas_price_wei();
-        } else {
-            $block = $this->get_latest_block();
-            $gasPriceAndTipWei = $this->query_web3_gas_price_wei();
-            $gasPriceTipWeiBI = (new \phpseclib3\Math\BigInteger($gasPriceAndTipWei))->subtract(new \phpseclib3\Math\BigInteger($block->baseFeePerGas, 16));
-            if ($gasPriceTipWeiBI->compare(new \phpseclib3\Math\BigInteger(0)) < 0) {
-                $gasPriceTipWeiBI = new \phpseclib3\Math\BigInteger(1000000000); // 1 Gwei
-            }
-            $default_gas_price_wei_BI = new \phpseclib3\Math\BigInteger($default_gas_price_wei['gas_price']);
-            if ($default_gas_price_wei_BI->compare($gasPriceTipWeiBI) < 0) {
-                $gasPriceTipWeiBI = $default_gas_price_wei_BI;
-            }
-            $gasPriceTipWei = $gasPriceTipWeiBI->toString();
-            $gasPriceWei = (new \phpseclib3\Math\BigInteger($block->baseFeePerGas, 16))
-                ->multiply(new \phpseclib3\Math\BigInteger(2)) // twice the last value to ensure it will fit
-                ->add($gasPriceTipWeiBI);
-            $gasPriceWei = $gasPriceWei->toString();
-            if ('0' === $gasPriceWei) {
-                return $default_gas_price_wei;
-            }
-        }
-
-        if (is_null($gasPriceWei)) {
-            return $default_gas_price_wei;
-        }
-
-        $cache_gas_price = array('gas_price' => $gasPriceWei, 'gas_price_tip' => $gasPriceTipWei);
-
-        return $cache_gas_price;
-    }
-
-    /**
-     * _get_default_gas_price_wei
-     *
-     * @return array
-     */
-    private function _get_default_gas_price_wei(): array
-    {
-        $gasPriceMaxGwei = doubleval($this->options['max_gas_price']);
-        return array('gas_price' => intval(floatval($gasPriceMaxGwei) * 1000000000), 'gas_price_tip' => null);
-    }
-
-    /**
-     * _is_eip1559
-     *
-     * @return bool
-     */
-    private function _is_eip1559(): bool
-    {
-        $block = $this->get_latest_block();
-        $isEIP1559 = property_exists($block, 'baseFeePerGas');
-        return $isEIP1559;
     }
 
     /**
@@ -519,6 +418,120 @@ final class Blockchain
     }
 
     /**
+     * Get the HttpProvider connection object
+     *
+     * @param  string $provider_url
+     * @param  int $network_timeout
+     * @return \Web3\Providers\HttpProvider
+     */
+    private function _get_provider(string $provider_url, int $network_timeout): \Web3\Providers\HttpProvider
+    {
+        $requestManager = new \Web3\RequestManagers\HttpRequestManager($provider_url, $network_timeout);
+        $_httpProvider = new \Web3\Providers\HttpProvider($requestManager);
+        return $_httpProvider;
+    }
+
+    /**
+     * _get_network_id
+     *
+     * @return int
+     * @throws \Exception
+     */
+    private function _get_network_id(): int
+    {
+        $ret = null;
+        $err = null;
+
+        $web3 = new \Web3\Web3($this->http_provider);
+        $net = $web3->net;
+        $net->version(function ($error, $version) use (&$ret, &$err) {
+            if ($error !== null) {
+                $err = $error;
+                return;
+            }
+            $ret = intval($version);
+        });
+
+        if (!is_null($err)) {
+            throw new \Exception('Failed to get network id: ' . $err);
+        }
+
+        if (is_null($ret)) {
+            throw new \Exception('Failed to get network id');
+        }
+
+        $ret = intval($ret);
+        return $ret;
+    }
+
+    /**
+     * _query_gas_price_wei
+     *
+     * @return array
+     */
+    private function _query_gas_price_wei(): array
+    {
+        $gasPriceWei = null;
+        $gasPriceTipWei = null;
+        $default_gas_price_wei = $this->_get_default_gas_price_wei();
+
+        $isEIP1559 = $this->is_eip1559();
+        if (!$isEIP1559) {
+            $gasPriceWei = $this->_query_web3_gas_price_wei();
+        } else {
+            $block = $this->get_latest_block();
+            $gasPriceAndTipWei = $this->_query_web3_gas_price_wei();
+            $gasPriceTipWeiBI = (new \phpseclib3\Math\BigInteger($gasPriceAndTipWei))->subtract(new \phpseclib3\Math\BigInteger($block->baseFeePerGas, 16));
+            if ($gasPriceTipWeiBI->compare(new \phpseclib3\Math\BigInteger(0)) < 0) {
+                $gasPriceTipWeiBI = new \phpseclib3\Math\BigInteger(1000000000); // 1 Gwei
+            }
+            $default_gas_price_wei_BI = new \phpseclib3\Math\BigInteger($default_gas_price_wei['gas_price']);
+            if ($default_gas_price_wei_BI->compare($gasPriceTipWeiBI) < 0) {
+                $gasPriceTipWeiBI = $default_gas_price_wei_BI;
+            }
+            $gasPriceTipWei = $gasPriceTipWeiBI->toString();
+            $gasPriceWei = (new \phpseclib3\Math\BigInteger($block->baseFeePerGas, 16))
+                ->multiply(new \phpseclib3\Math\BigInteger(2)) // twice the last value to ensure it will fit
+                ->add($gasPriceTipWeiBI);
+            $gasPriceWei = $gasPriceWei->toString();
+            if ('0' === $gasPriceWei) {
+                return $default_gas_price_wei;
+            }
+        }
+
+        if (is_null($gasPriceWei)) {
+            return $default_gas_price_wei;
+        }
+
+        $cache_gas_price = array('gas_price' => $gasPriceWei, 'gas_price_tip' => $gasPriceTipWei);
+
+        return $cache_gas_price;
+    }
+
+    /**
+     * _get_default_gas_price_wei
+     *
+     * @return array
+     */
+    private function _get_default_gas_price_wei(): array
+    {
+        $gasPriceMaxGwei = doubleval($this->options['max_gas_price']);
+        return array('gas_price' => intval(floatval($gasPriceMaxGwei) * 1000000000), 'gas_price_tip' => null);
+    }
+
+    /**
+     * _is_eip1559
+     *
+     * @return bool
+     */
+    private function _is_eip1559(): bool
+    {
+        $block = $this->get_latest_block();
+        $isEIP1559 = property_exists($block, 'baseFeePerGas');
+        return $isEIP1559;
+    }
+
+    /**
      * _get_gas_estimate
      *
      * @param  mixed $transactionParamsArray
@@ -552,12 +565,12 @@ final class Blockchain
     }
 
     /**
-     * query_web3_gas_price_wei
+     * _query_web3_gas_price_wei
      *
      * @return string
      * @throws \Exception
      */
-    function query_web3_gas_price_wei(): string
+    private function _query_web3_gas_price_wei(): string
     {
         $ret = null;
         $err = null;
