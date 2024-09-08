@@ -15,6 +15,7 @@ class TestCaseBase extends BaseTestCase
     protected $blockchain;
 
     const BLOCKCHAIN_PROVIDER_URL = 'http://127.0.0.1:8545';
+    const BLOCKCHAIN_WRONG_PROVIDER_URL = 'http://not-exist-url-149719.com:1234';
     const ERC20_TOKEN_ADDRESS = '0x5fbdb2315678afecb367f032d93f642f64180aa3';
     const ERC20_TOKEN_ADDRESS2 = '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512';
     const ERC20_TOKEN_OWNER_ADDRESS = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';

@@ -604,7 +604,7 @@ final class Blockchain
                 $err = $error;
                 return;
             }
-            $ret = intval($version);
+            $ret = $version;
         });
 
         if (!is_null($err)) {

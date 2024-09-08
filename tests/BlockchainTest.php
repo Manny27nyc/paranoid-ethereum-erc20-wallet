@@ -20,7 +20,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testConstructWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
         $b->get_network_id();
     }
 
@@ -181,7 +181,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Could not resolve host');
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
         // throw
         new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $b);
     }
@@ -190,7 +190,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Could not resolve host');
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
         $pk = self::ERC20_TOKEN_OWNER_PK;
         $account = new Account($pk);
         // throw
@@ -201,7 +201,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Could not resolve host');
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         $pk = self::ERC20_TOKEN_OWNER_PK;
         $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
@@ -220,7 +220,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Could not resolve host');
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
         $coin = new NativeCoin($b);
@@ -233,7 +233,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Could not resolve host');
-        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         // throw
         $b->get_latest_block();
