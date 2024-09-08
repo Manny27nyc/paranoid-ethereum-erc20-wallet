@@ -1,8 +1,8 @@
 # The Paranoid Ethereum Wallet library
 
 [![PHP](https://github.com/olegabr/paranoid-ethereum-erc20-wallet/actions/workflows/php.yml/badge.svg)](https://github.com/olegabr/paranoid-ethereum-erc20-wallet/actions/workflows/php.yml)
-[![codecov](https://codecov.io/gh/olegabr/paranoid-ethereum-erc20-wallet/branch/master/graph/badge.svg)](https://codecov.io/gh/olegabr/paranoid-ethereum-erc20-wallet)
-[![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/olegabr/paranoid-ethereum-erc20-wallet/blob/master/LICENSE)
+[![codecov](https://codecov.io/gh/olegabr/paranoid-ethereum-erc20-wallet/branch/main/graph/badge.svg)](https://codecov.io/gh/olegabr/paranoid-ethereum-erc20-wallet)
+[![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/olegabr/paranoid-ethereum-erc20-wallet/blob/main/LICENSE)
 
 You can generate accounts, check balances and send native coins and tokens from your local console.
 Designed to prevent all user errors while sending coins and tokens on blockchain.
