@@ -84,33 +84,12 @@ final class ERC20 extends Coin implements Contract
      */
     function get_address_balance(Address $address): Wei
     {
-        $ret = null;
-        $err = null;
-        $callback = function ($error, $result) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            foreach ($result as $key => $res) {
-                $ret = $res;
-                break;
-            }
-        };
-
-        $this->blockchain->call_contract_method(
+        $ret = $this->blockchain->call_contract_method(
             $this,
             "balanceOf",
             [$address->get_address()],
-            $callback
+            'Failed to get token balance'
         );
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get token balance: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get token balance');
-        }
 
         return $this->_make_wei($ret->toString());
     }
@@ -177,33 +156,12 @@ final class ERC20 extends Coin implements Contract
      */
     private function _get_decimals_impl(): int
     {
-        $ret = null;
-        $err = null;
-        $callback = function ($error, $result) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            foreach ($result as $key => $res) {
-                $ret = $res;
-                break;
-            }
-        };
-        $this->blockchain->call_contract_method(
+        $ret = $this->blockchain->call_contract_method(
             $this,
             "decimals",
             [],
-            $callback
+            'Failed to get token decimals'
         );
-
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get token decimals: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get token decimals');
-        }
 
         return intval($ret->toString());
     }

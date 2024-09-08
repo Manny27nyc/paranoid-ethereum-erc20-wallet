@@ -6,6 +6,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       hardfork: "berlin",
+      gasPrice: 2,
     },
   },
 };

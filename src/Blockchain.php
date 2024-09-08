@@ -121,17 +121,41 @@ final class Blockchain
      * @param  Contract $c
      * @param  string $method
      * @param  array $method_args
-     * @param  callable $callback
-     * @return void
+     * @param  string $error_msg
+     * @return mixed
      */
-    function call_contract_method(Contract $c, string $method, array $method_args, callable $callback): void
+    function call_contract_method(Contract $c, string $method, array $method_args, string $error_msg)
     {
+        $ret = null;
+        $err = null;
+        $callback = function ($error, $result) use (&$ret, &$err) {
+            if ($error !== null) {
+                $err = $error;
+                return;
+            }
+            foreach ($result as $key => $res) {
+                $ret = $res;
+                break;
+            }
+        };
+
         try {
             $contract = new \Web3\Contract($this->http_provider, $c->get_abi());
             $contract->at($c->get_contract_address()->get_address())->call(...array_merge([$method], $method_args, [$callback]));
         } catch (\GuzzleHttp\Exception\ConnectException $ex) {
             throw new \Exception(sprintf('Failed to call \'%s\' on contract at %s', $method, $c->get_contract_address()->get_address()), 0, $ex);
         }
+
+
+        if (!is_null($err)) {
+            throw new \Exception($error_msg . ': ' . $err);
+        }
+
+        // if (is_null($ret)) {
+        //     throw new \Exception($error_msg);
+        // }
+
+        return $ret;
     }
 
     /**
@@ -174,7 +198,7 @@ final class Blockchain
     private function _get_contract_code(Address $contract_address): string
     {
         if (!isset($this->_address_to_code_cache[$contract_address->get_address()])) {
-            $ret = $this->_call_blockchain_method('getCode', [$contract_address->get_address()], 'Failed to get contract code');
+            $ret = $this->_call_blockchain_method($this->web3->eth, 'getCode', [$contract_address->get_address()], 'Failed to get contract code');
             $this->_address_to_code_cache[$contract_address->get_address()] = $ret;
         }
 
@@ -190,7 +214,7 @@ final class Blockchain
      */
     function get_account_nonce(Account $account): int
     {
-        return intval($this->_call_blockchain_method('getTransactionCount', [$account->get_address()->get_address()], 'Failed to get account nonce')->toString());
+        return intval($this->_call_blockchain_method($this->web3->eth, 'getTransactionCount', [$account->get_address()->get_address()], 'Failed to get account nonce')->toString());
     }
 
     /**
@@ -202,7 +226,7 @@ final class Blockchain
      */
     function send_transaction(TxSigned $tx_signed): string
     {
-        return $this->_call_blockchain_method('sendRawTransaction', [$tx_signed->get_tx_signed_raw()], 'Failed to send transaction');
+        return $this->_call_blockchain_method($this->web3->eth, 'sendRawTransaction', [$tx_signed->get_tx_signed_raw()], 'Failed to send transaction');
     }
 
     /**
@@ -214,7 +238,7 @@ final class Blockchain
      */
     function get_address_balance(Address $address): string
     {
-        return $this->_call_blockchain_method('getBalance', [$address->get_address()], 'Failed to get account balance');
+        return $this->_call_blockchain_method($this->web3->eth, 'getBalance', [$address->get_address()], 'Failed to get account balance');
     }
 
     /**
@@ -295,7 +319,7 @@ final class Blockchain
      */
     function get_latest_block(): object
     {
-        return $this->_call_blockchain_method('getBlockByNumber', ['latest', false], 'Failed to get latest block');
+        return $this->_call_blockchain_method($this->web3->eth, 'getBlockByNumber', ['latest', false], 'Failed to get latest block');
     }
 
     /**
@@ -385,16 +409,18 @@ final class Blockchain
     {
         $cache_gas_price_wei = $this->_query_gas_price_wei();
 
-        if (is_null($cache_gas_price_wei['gas_price_tip'])) {
-            return null;
-        }
+        // _get_gas_price_tip_wei use only in EIP1559 context: this code can not be reached
+        // if (is_null($cache_gas_price_wei['gas_price_tip'])) {
+        //     return null;
+        // }
 
         $gasPriceTipWei = doubleval($cache_gas_price_wei['gas_price_tip']);
-        $gasPriceTipMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
+        // $gasPriceTipMaxWei = doubleval($this->_get_default_gas_price_wei()['gas_price']);
 
-        if ($gasPriceTipMaxWei < $gasPriceTipWei) {
-            $gasPriceTipWei = $gasPriceTipMaxWei;
-        }
+        // Already checked before:
+        // if ($gasPriceTipMaxWei < $gasPriceTipWei) {
+        //     $gasPriceTipWei = $gasPriceTipMaxWei;
+        // }
         return intval($gasPriceTipWei);
     }
 
@@ -509,29 +535,7 @@ final class Blockchain
      */
     private function _get_network_id(): int
     {
-        $ret = null;
-        $err = null;
-
-        $web3 = new \Web3\Web3($this->http_provider);
-        $net = $web3->net;
-        $net->version(function ($error, $version) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = $version;
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get network id: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get network id');
-        }
-
-        $ret = intval($ret);
-        return $ret;
+        return intval($this->_call_blockchain_method($this->web3->net, 'version', [], 'Failed to get network id'));
     }
 
     /**
@@ -564,13 +568,10 @@ final class Blockchain
                 ->multiply(new \phpseclib3\Math\BigInteger(2)) // twice the last value to ensure it will fit
                 ->add($gasPriceTipWeiBI);
             $gasPriceWei = $gasPriceWei->toString();
-            if ('0' === $gasPriceWei) {
-                return $default_gas_price_wei;
-            }
-        }
-
-        if (is_null($gasPriceWei)) {
-            return $default_gas_price_wei;
+            // $block->baseFeePerGas is never zero. code unreachable:
+            // if ('0' === $gasPriceWei) {
+            //     return $default_gas_price_wei;
+            // }
         }
 
         $cache_gas_price = array('gas_price' => $gasPriceWei, 'gas_price_tip' => $gasPriceTipWei);
@@ -613,7 +614,7 @@ final class Blockchain
         $transactionParamsArrayCopy = $transactionParamsArray;
         unset($transactionParamsArrayCopy['nonce']);
         unset($transactionParamsArrayCopy['chainId']);
-        return $this->_call_blockchain_method('estimateGas', [$transactionParamsArrayCopy], 'Failed to estimate gas');
+        return $this->_call_blockchain_method($this->web3->eth, 'estimateGas', [$transactionParamsArrayCopy], 'Failed to estimate gas');
     }
 
     /**
@@ -624,18 +625,19 @@ final class Blockchain
      */
     private function _query_web3_gas_price_wei(): string
     {
-        return $this->_call_blockchain_method('gasPrice', [], 'Failed to get gas price')->toString();
+        return $this->_call_blockchain_method($this->web3->eth, 'gasPrice', [], 'Failed to get gas price')->toString();
     }
 
     /**
      * _call_blockchain_method
      *
+     * @param  mixed $obj
      * @param  string $method
      * @param  array $method_args
      * @param  string $error_msg
      * @return mixed
      */
-    private function _call_blockchain_method(string $method, array $method_args, string $error_msg)
+    private function _call_blockchain_method($obj, string $method, array $method_args, string $error_msg)
     {
         $ret = null;
         $err = null;
@@ -647,7 +649,7 @@ final class Blockchain
             $ret = $result;
         };
         try {
-            $this->web3->eth->{$method}(...array_merge($method_args, [$callback]));
+            $obj->{$method}(...array_merge($method_args, [$callback]));
         } catch (\GuzzleHttp\Exception\ConnectException $ex) {
             throw new \Exception($error_msg, 0, $ex);
         }
