@@ -59,6 +59,7 @@ jobs:
 
       - name: Create local node, deploy and test on the pre-EIP1559 (Berlin hardfork)
         run: |
+          sleep 10 
           yarn hardhat node --config hardhat-berlin.config.ts &
           HARDHAT_NODE_PID=$!
           sleep 10 
