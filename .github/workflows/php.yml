@@ -62,8 +62,8 @@ jobs:
           sleep 10 
           yarn hardhat ignition deploy ./ignition/modules/TSX.ts --network localhost 
           yarn hardhat ignition deploy ./ignition/modules/TSX2.ts --network localhost
-          vendor/bin/phpunit --coverage-clover=coverage.xml
+          vendor/bin/phpunit --coverage-clover=berlin-coverage.xml
 
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v4.2.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
