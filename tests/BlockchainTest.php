@@ -180,7 +180,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testGetContractCodeWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Could not resolve host');
+        $this->expectExceptionMessage('Failed to get contract code');
         $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
         // throw
         new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $b);
@@ -189,7 +189,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testGetAccountNonceWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Could not resolve host');
+        $this->expectExceptionMessage('Failed to get account nonce');
         $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
         $pk = self::ERC20_TOKEN_OWNER_PK;
         $account = new Account($pk);
@@ -200,7 +200,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testSendTransactionWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Could not resolve host');
+        $this->expectExceptionMessage('Failed to get account balance');
         $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         $pk = self::ERC20_TOKEN_OWNER_PK;
@@ -219,7 +219,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testGetAddressBalanceWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Could not resolve host');
+        $this->expectExceptionMessage('Failed to get account balance');
         $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
@@ -232,7 +232,7 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testGetLatestBlockWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Could not resolve host');
+        $this->expectExceptionMessage('Failed to get latest block');
         $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
 
         // throw

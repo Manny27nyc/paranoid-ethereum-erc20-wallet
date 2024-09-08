@@ -126,8 +126,12 @@ final class Blockchain
      */
     function call_contract_method(Contract $c, string $method, array $method_args, callable $callback): void
     {
-        $contract = new \Web3\Contract($this->http_provider, $c->get_abi());
-        $contract->at($c->get_contract_address()->get_address())->call(...array_merge([$method], $method_args, [$callback]));
+        try {
+            $contract = new \Web3\Contract($this->http_provider, $c->get_abi());
+            $contract->at($c->get_contract_address()->get_address())->call(...array_merge([$method], $method_args, [$callback]));
+        } catch (\GuzzleHttp\Exception\ConnectException $ex) {
+            throw new \Exception(sprintf('Failed to call \'%s\' on contract at %s', $method, $c->get_contract_address()->get_address()), 0, $ex);
+        }
     }
 
     /**
@@ -170,24 +174,7 @@ final class Blockchain
     private function _get_contract_code(Address $contract_address): string
     {
         if (!isset($this->_address_to_code_cache[$contract_address->get_address()])) {
-            $ret = null;
-            $err = null;
-
-            $this->web3->eth->getCode($contract_address->get_address(), function ($error, $code) use (&$ret, &$err) {
-                if ($error !== null) {
-                    $err = $error;
-                    return;
-                }
-                $ret = $code;
-            });
-
-            if (!is_null($err)) {
-                throw new \Exception('Failed to get contract code: ' . $err);
-            }
-
-            if (is_null($ret)) {
-                throw new \Exception('Failed to get contract code');
-            }
+            $ret = $this->_call_blockchain_method('getCode', [$contract_address->get_address()], 'Failed to get contract code');
             $this->_address_to_code_cache[$contract_address->get_address()] = $ret;
         }
 
@@ -203,23 +190,7 @@ final class Blockchain
      */
     function get_account_nonce(Account $account): int
     {
-        $ret = 0;
-        $err = null;
-        $this->web3->eth->getTransactionCount($account->get_address()->get_address(), function ($error, $transactionCount) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = intval($transactionCount->toString());
-        });
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get account nonce: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get account nonce');
-        }
-        return $ret;
+        return intval($this->_call_blockchain_method('getTransactionCount', [$account->get_address()->get_address()], 'Failed to get account nonce')->toString());
     }
 
     /**
@@ -231,26 +202,7 @@ final class Blockchain
      */
     function send_transaction(TxSigned $tx_signed): string
     {
-        $ret = null;
-        $err = null;
-
-        $this->web3->eth->sendRawTransaction($tx_signed->get_tx_signed_raw(), function ($error, $transaction) use (&$ret, &$err) {
-            if ($err !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = $transaction;
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to send transaction: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to send transaction');
-        }
-
-        return $ret;
+        return $this->_call_blockchain_method('sendRawTransaction', [$tx_signed->get_tx_signed_raw()], 'Failed to send transaction');
     }
 
     /**
@@ -262,26 +214,7 @@ final class Blockchain
      */
     function get_address_balance(Address $address): string
     {
-        $ret = null;
-        $err = null;
-
-        $this->web3->eth->getBalance($address->get_address(), function ($error, $balance) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = $balance;
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get account balance: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get account balance');
-        }
-
-        return $ret;
+        return $this->_call_blockchain_method('getBalance', [$address->get_address()], 'Failed to get account balance');
     }
 
     /**
@@ -362,25 +295,7 @@ final class Blockchain
      */
     function get_latest_block(): object
     {
-        $ret = null;
-        $err = null;
-        $this->web3->eth->getBlockByNumber('latest', false, function ($error, $block) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = $block;
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to get latest block: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get latest block');
-        }
-
-        return $ret;
+        return $this->_call_blockchain_method('getBlockByNumber', ['latest', false], 'Failed to get latest block');
     }
 
     /**
@@ -695,28 +610,10 @@ final class Blockchain
      */
     private function _get_gas_estimate(array $transactionParamsArray): \phpseclib3\Math\BigInteger
     {
-        $ret = null;
-        $err = null;
         $transactionParamsArrayCopy = $transactionParamsArray;
         unset($transactionParamsArrayCopy['nonce']);
         unset($transactionParamsArrayCopy['chainId']);
-        $this->web3->eth->estimateGas($transactionParamsArrayCopy, function ($error, $gas) use (&$ret, &$err) {
-            if ($error !== null) {
-                $err = $error;
-                return;
-            }
-            $ret = $gas;
-        });
-
-        if (!is_null($err)) {
-            throw new \Exception('Failed to estimate gas: ' . $err);
-        }
-
-        if (is_null($ret)) {
-            throw new \Exception('Failed to estimate gas');
-        }
-
-        return $ret;
+        return $this->_call_blockchain_method('estimateGas', [$transactionParamsArrayCopy], 'Failed to estimate gas');
     }
 
     /**
@@ -727,24 +624,42 @@ final class Blockchain
      */
     private function _query_web3_gas_price_wei(): string
     {
+        return $this->_call_blockchain_method('gasPrice', [], 'Failed to get gas price')->toString();
+    }
+
+    /**
+     * _call_blockchain_method
+     *
+     * @param  string $method
+     * @param  array $method_args
+     * @param  string $error_msg
+     * @return mixed
+     */
+    private function _call_blockchain_method(string $method, array $method_args, string $error_msg)
+    {
         $ret = null;
         $err = null;
-        $this->web3->eth->gasPrice(function ($error, $gasPrice) use (&$ret, &$err) {
+        $callback = function ($error, $result) use (&$ret, &$err) {
             if ($error !== null) {
                 $err = $error;
                 return;
             }
-            $ret = $gasPrice;
-        });
+            $ret = $result;
+        };
+        try {
+            $this->web3->eth->{$method}(...array_merge($method_args, [$callback]));
+        } catch (\GuzzleHttp\Exception\ConnectException $ex) {
+            throw new \Exception($error_msg, 0, $ex);
+        }
 
         if (!is_null($err)) {
-            throw new \Exception('Failed to get gas price: ' . $err);
+            throw new \Exception($error_msg . ': ' . $err);
         }
 
-        if (is_null($ret)) {
-            throw new \Exception('Failed to get gas price');
-        }
+        // if (is_null($ret)) {
+        //     throw new \Exception($error_msg);
+        // }
 
-        return $ret->toString();
+        return $ret;
     }
 }

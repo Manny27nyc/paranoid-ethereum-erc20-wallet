@@ -26,6 +26,13 @@ final class ERC20Test extends \Tests\TestCaseBase
         $this->assertEquals(18, $coin->get_decimals());
     }
 
+    public function testGetBlockchain(): void
+    {
+        $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
+        $blockchain = $coin->get_blockchain();
+        $this->assertEquals(18, $blockchain->get_native_coin_decimals());
+    }
+
     public function testGetAddressBalance(): void
     {
         $to = new Address(self::ERC20_TOKEN_OWNER_ADDRESS);
