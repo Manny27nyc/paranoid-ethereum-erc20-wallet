@@ -52,20 +52,20 @@ jobs:
           yarn hardhat node --config hardhat.config.ts &
           HARDHAT_NODE_PID=$!
           sleep 10 
-            && yarn hardhat ignition deploy ./ignition/modules/TSX.ts --network localhost 
-            && yarn hardhat ignition deploy ./ignition/modules/TSX2.ts --network localhost
-            && vendor/bin/phpunit --coverage-clover=coverage.xml
-            && kill $HARDHAT_NODE_PID
+          yarn hardhat ignition deploy ./ignition/modules/TSX.ts --network localhost 
+          yarn hardhat ignition deploy ./ignition/modules/TSX2.ts --network localhost
+          vendor/bin/phpunit --coverage-clover=coverage.xml
+          kill $HARDHAT_NODE_PID
 
       - name: Create local node, deploy and test on the pre-EIP1559 (Berlin hardfork)
         run: |
           yarn hardhat node --config hardhat-berlin.config.ts &
           HARDHAT_NODE_PID=$!
           sleep 10 
-            && yarn hardhat ignition deploy ./ignition/modules/TSX.ts --network localhost 
-            && yarn hardhat ignition deploy ./ignition/modules/TSX2.ts --network localhost
-            && vendor/bin/phpunit --coverage-clover=coverage.xml
-            && kill $HARDHAT_NODE_PID
+          yarn hardhat ignition deploy ./ignition/modules/TSX.ts --network localhost 
+          yarn hardhat ignition deploy ./ignition/modules/TSX2.ts --network localhost
+          vendor/bin/phpunit --coverage-clover=coverage.xml
+          kill $HARDHAT_NODE_PID
 
       - uses: codecov/codecov-action@v1
         with:
