@@ -33,6 +33,18 @@ final class NativeCoinTest extends \Tests\TestCaseBase
         $this->assertEquals('10000000000000000', $amount_wei->get_wei_str());
     }
 
+    public function testMakeAmountToSendInsufficientBalance(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $pk = 'de9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0';
+        $account = new Account($pk);
+        $amount = 100000.0;
+        $coin = new NativeCoin($this->blockchain);
+        // throw
+        $coin->make_amount_to_send($account, $amount);
+    }
+
     public function testMakeTransaction(): void
     {
         $private_key = '47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a';

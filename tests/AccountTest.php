@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Paranoid\Account;
+use Paranoid\Address;
 use Paranoid\NativeCoin;
+use Paranoid\ERC20;
 
 final class AccountTest extends \Tests\TestCaseBase
 {
@@ -39,6 +41,15 @@ final class AccountTest extends \Tests\TestCaseBase
         $pk = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
         $account = new Account($pk);
         $this->assertGreaterThan(0, $account->get_nonce($this->blockchain));
+    }
+
+    public function testGetTokenBalance(): void
+    {
+        $pk = self::ERC20_TOKEN_OWNER_PK;
+        $account = new Account($pk);
+        $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
+        $balance = $account->get_token_balance($coin);
+        $this->assertEquals('1000000000000000000000000', $balance->get_wei_str());
     }
 
     public function testNativeBalance(): void

@@ -34,15 +34,36 @@ final class ERC20Test extends \Tests\TestCaseBase
         $this->assertEquals('1000000000000000000000000', $balance->get_wei_str());
     }
 
+    public function testGetAccountBalance(): void
+    {
+        $pk = self::ERC20_TOKEN_OWNER_PK;
+        $account = new Account($pk);
+        $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
+        $balance = $coin->get_account_balance($account);
+        $this->assertEquals('1000000000000000000000000', $balance->get_wei_str());
+    }
+
     public function testMakeAmountToSend(): void
     {
         $pk = self::ERC20_TOKEN_OWNER_PK;
         $account = new Account($pk);
-        $amount = 0.01;
+        $amount = 10.0;
         $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
         $amount_wei = $coin->make_amount_to_send($account, $amount);
 
-        $this->assertEquals('10000000000000000', $amount_wei->get_wei_str());
+        $this->assertEquals('10000000000000000000', $amount_wei->get_wei_str());
+    }
+
+    public function testMakeAmountToSendInvalidData(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $pk = '47c99abed3324a2707c28affff1267e45918ec8c3f20b8aa892e8b065d2942dd';
+        $account = new Account($pk);
+        $amount = 10.0;
+        $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
+        // throw
+        $coin->make_amount_to_send($account, $amount);
     }
 
     public function testMakeTransferData(): void
@@ -59,6 +80,24 @@ final class ERC20Test extends \Tests\TestCaseBase
         $tx_data = $coin->make_transfer_data($to, $amount_wei);
 
         $this->assertEquals('a9059cbb000000000000000000000000a0ee7a142d267c1f36714e4a8f75612f20a79720000000000000000000000000000000000000000000000000002386f26fc10000', $tx_data->get_data());
+    }
+
+    public function testMakeTransferDataInvalidData(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Wei tokens_amount from another token provided');
+
+        $private_key = self::ERC20_TOKEN_OWNER_PK;
+        $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
+        $amount = 0.01;
+
+        $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
+        $coin2 = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS2), $this->blockchain);
+
+        $user_account = new Account($private_key);
+
+        $amount_wei = $coin2->make_amount_to_send($user_account, $amount);
+        $coin->make_transfer_data($to, $amount_wei);
     }
 
     public function testMakeTransaction(): void

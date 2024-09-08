@@ -66,8 +66,6 @@ final class Blockchain
         ], $options);
         $this->http_provider = $this->_get_provider($provider_url, $this->options['network_timeout']);
         $this->web3 = new \Web3\Web3($this->http_provider);
-        $this->network_id = $this->_get_network_id();
-        $this->_is_eip1559 = $this->_is_eip1559();
     }
 
     /**
@@ -101,6 +99,9 @@ final class Blockchain
      */
     function get_network_id(): int
     {
+        if (is_null($this->network_id)) {
+            $this->network_id = $this->_get_network_id();
+        }
         return $this->network_id;
     }
 
@@ -347,6 +348,9 @@ final class Blockchain
      */
     function is_eip1559(): bool
     {
+        if (is_null($this->_is_eip1559)) {
+            $this->_is_eip1559 = $this->_get_is_eip1559();
+        }
         return $this->_is_eip1559;
     }
 
@@ -675,7 +679,7 @@ final class Blockchain
      *
      * @return bool
      */
-    private function _is_eip1559(): bool
+    private function _get_is_eip1559(): bool
     {
         $block = $this->get_latest_block();
         $isEIP1559 = property_exists($block, 'baseFeePerGas');

@@ -20,7 +20,8 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testConstructWrongProviderURL(): void
     {
         $this->expectException(\Exception::class);
-        new Blockchain('http://not-exist-url-149719.com:1234');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $b->get_network_id();
     }
 
     public function testConstruct(): void
@@ -39,6 +40,15 @@ final class BlockchainTest extends \Tests\TestCaseBase
     public function testOptions(): void
     {
         $this->assertEquals(200000, $this->blockchain->get_option('gas_limit'));
+    }
+
+    public function testOptionsInvalid(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $option_name = 'non-existing-option';
+        $this->expectExceptionMessage('Unknown option name requested: ' . $option_name);
+
+        $this->blockchain->get_option($option_name);
     }
 
     public function testProviderURL(): void
@@ -157,12 +167,75 @@ final class BlockchainTest extends \Tests\TestCaseBase
 
     public function testIsEIP1559(): void
     {
-        $this->assertTrue($this->blockchain->is_eip1559());
+        $this->blockchain->is_eip1559();
+        $this->expectNotToPerformAssertions();
     }
 
     public function testGetLatestBlock(): void
     {
         $block = $this->blockchain->get_latest_block();
         $this->expectNotToPerformAssertions();
+    }
+
+    public function testGetContractCodeWrongProviderURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not resolve host');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        // throw
+        new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $b);
+    }
+
+    public function testGetAccountNonceWrongProviderURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not resolve host');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+        $pk = self::ERC20_TOKEN_OWNER_PK;
+        $account = new Account($pk);
+        // throw
+        $account->get_nonce($b);
+    }
+
+    public function testSendTransactionWrongProviderURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not resolve host');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+
+        $pk = self::ERC20_TOKEN_OWNER_PK;
+        $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
+        $amount = 0.01;
+
+        $coin = new NativeCoin($b);
+        $user_account = new Account($pk);
+        $amount_wei = $coin->make_amount_to_send($user_account, $amount);
+        $tx = $coin->make_transaction($user_account, $to, $amount_wei);
+        $tx_signed = $user_account->sign_tx($tx);
+        // throw
+        $b->send_transaction($tx_signed);
+    }
+
+    public function testGetAddressBalanceWrongProviderURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not resolve host');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+
+        $to = new Address('0xa0Ee7A142d267C1f36714E4a8F75612F20a79720');
+        $coin = new NativeCoin($b);
+
+        // throw
+        $coin->get_address_balance($to);
+    }
+
+    public function testGetLatestBlockWrongProviderURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not resolve host');
+        $b = new Blockchain('http://not-exist-url-149719.com:1234');
+
+        // throw
+        $b->get_latest_block();
     }
 }

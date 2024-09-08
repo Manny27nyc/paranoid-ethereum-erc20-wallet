@@ -125,7 +125,7 @@ final class ERC20 extends Coin implements Contract
     function make_transfer_data(Address $toAddress, Wei $tokens_amount): TxData
     {
         if ($this->get_decimals() !== $tokens_amount->get_decimals()) {
-            throw new \InvalidArgumentException('Wei tokens_amount from another token or blockchain provided');
+            throw new \InvalidArgumentException('Wei tokens_amount from another token provided');
         }
         $data = $this->blockchain->get_contract_method_data($this, 'transfer', [$toAddress->get_address(), $tokens_amount->get_wei_str()]);
         return self::_make_tx_data($data);
