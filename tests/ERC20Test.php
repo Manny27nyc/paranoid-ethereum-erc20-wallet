@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Paranoid\Address;
 use Paranoid\Account;
-use Paranoid\NativeCoin;
+use Paranoid\Blockchain;
 use Paranoid\ERC20;
 
 final class ERC20Test extends \Tests\TestCaseBase
@@ -32,6 +32,14 @@ final class ERC20Test extends \Tests\TestCaseBase
         $coin = new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $this->blockchain);
         $balance = $coin->get_address_balance($to);
         $this->assertEquals('1000000000000000000000000', $balance->get_wei_str());
+    }
+
+    public function testGetAddressBalanceWrongBlockchainURL(): void
+    {
+        $this->expectException(\Exception::class);
+        $b = new Blockchain(self::BLOCKCHAIN_WRONG_PROVIDER_URL);
+        // throw
+        new ERC20(new Address(self::ERC20_TOKEN_ADDRESS), $b);
     }
 
     public function testGetAccountBalance(): void
