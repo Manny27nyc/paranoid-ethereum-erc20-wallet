@@ -25,16 +25,14 @@
     },
     {
       "type": "vcs",
-      "url": "https://github.com/olegabr/bitcoin-php"
+      "url": "https://github.com/olegabr/php-ethereum-address"
     }
   ],
   "require": {
-    "php": "^7.4",
+    "php": ">=7.2",
     "olegabr/web3.php": "~0.2",
     "olegabr/ethereum-tx": "^0.5.1",
     "phpseclib/phpseclib": "3.0.14",
-    "bitwasp/buffertools": "0.5.7",
-    "olegabr/bitcoin": "1.0.7",
     "guzzlehttp/guzzle": "7.4.2",
     "composer/semver": "1.7.2",
     "guzzlehttp/psr7": "1.8.5 || 2.2.1",
@@ -42,7 +40,8 @@
     "psr/http-client": "1.0.1",
     "psr/http-factory": "1.0.1",
     "psr/http-message": "1.0.1",
-    "symfony/deprecation-contracts": "2.5.x-dev"
+    "symfony/deprecation-contracts": "2.5.x-dev",
+    "kornrunner/ethereum-address": "dev-main"
   },
   "autoload": {
     "psr-4": {
@@ -58,6 +57,6 @@
   ],
   "minimum-stability": "dev",
   "require-dev": {
-    "phpunit/phpunit": "9.6.x-dev"
+    "phpunit/phpunit": "^8|^9"
   }
 }

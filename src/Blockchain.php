@@ -336,9 +336,9 @@ final class Blockchain
     function make_transaction(Account $from, Address $to, TxData $tx_data, NativeWei $tx_value): Tx
     {
         $nonce = $this->get_account_nonce($from);
-        $nonceb = \BitWasp\Buffertools\Buffer::int(intval($nonce));
+        $nonce_bn = new \phpseclib3\Math\BigInteger(intval($nonce));
         $gas_limit = $this->_get_gas_limit($to);
-        $gasLimit = \BitWasp\Buffertools\Buffer::int($gas_limit);
+        $gasLimit_bn = new \phpseclib3\Math\BigInteger(intval($gas_limit));
 
         $data = $tx_data->get_data();
         $value = $tx_value->get_wei_str();
@@ -346,9 +346,9 @@ final class Blockchain
         $value_hex = $value_bn->toHex();
         $transactionData = [
             'from' => $from->get_address()->get_address(),
-            'nonce' => '0x' . $nonceb->getHex(),
+            'nonce' => '0x' . ltrim($nonce_bn->toHex(), '0'),
             'to' => strtolower($to->get_address()),
-            'gas' => '0x' . ltrim($gasLimit->getHex(), '0'),
+            'gas' => '0x' . ltrim($gasLimit_bn->toHex(), '0'),
             'value' => '0x' . (empty($value_hex) ? '0' : $value_hex),
             'chainId' => $this->get_network_id(),
             'data' => !empty($data) ? '0x' . $data : null,
@@ -356,8 +356,8 @@ final class Blockchain
 
         if (21000 < $gas_limit) {
             $gasEstimate = $this->_get_gas_estimate($transactionData);
-            if ($gasLimit->getHex() === $gasEstimate->toHex()) {
-                throw new \Exception("Too low gas_limit option specified: " . $gasLimit->getHex());
+            if ($gasLimit_bn->toHex() === $gasEstimate->toHex()) {
+                throw new \Exception("Too low gas_limit option specified: " . $gasLimit_bn->toHex());
             }
             $transactionData['gas'] = '0x' . $gasEstimate->toHex();
         }
@@ -438,19 +438,19 @@ final class Blockchain
         ];
 
         $gasPrice = $this->_get_gas_price_wei();
-        $gasPrice = \BitWasp\Buffertools\Buffer::int(intval($gasPrice));
+        $gasPrice_bn = new \phpseclib3\Math\BigInteger(intval($gasPrice));
 
         if ($this->is_eip1559()) {
             $transactionData['accessList'] = [];
             // EIP1559
-            $transactionData['maxFeePerGas'] = '0x' . $gasPrice->getHex();
+            $transactionData['maxFeePerGas'] = '0x' . $gasPrice_bn->toHex();
 
             $gasPriceTip = $this->_get_gas_price_tip_wei();
-            $gasPriceTip = \BitWasp\Buffertools\Buffer::int(intval($gasPriceTip));
-            $transactionData['maxPriorityFeePerGas'] = '0x' . $gasPriceTip->getHex();
+            $gasPriceTip_bn = new \phpseclib3\Math\BigInteger(intval($gasPriceTip));
+            $transactionData['maxPriorityFeePerGas'] = '0x' . $gasPriceTip_bn->toHex();
         } else {
             // pre-EIP1559
-            $transactionData['gasPrice'] = '0x' . $gasPrice->getHex();
+            $transactionData['gasPrice'] = '0x' . $gasPrice_bn->toHex();
         }
 
         return $transactionData;

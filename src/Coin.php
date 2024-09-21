@@ -56,27 +56,6 @@ abstract class Coin
     }
 
     /**
-     * get_address_balance
-     *
-     * @param  Address $address
-     * @return Wei
-     * @throws \Exception
-     */
-    abstract function get_address_balance(Address $address): Wei;
-
-    /**
-     * get_account_balance
-     *
-     * @param  Account $account
-     * @return Wei
-     * @throws \Exception
-     */
-    function get_account_balance(Account $account): Wei
-    {
-        return $this->get_address_balance($account->get_address());
-    }
-
-    /**
      * Safely multiply double and int values and return a \phpseclib3\Math\BigInteger value
      *
      * @param  double $dval

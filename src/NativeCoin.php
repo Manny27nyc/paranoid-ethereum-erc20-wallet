@@ -37,6 +37,18 @@ final class NativeCoin extends Coin
     }
 
     /**
+     * get_account_balance
+     *
+     * @param  Account $account
+     * @return NativeWei
+     * @throws \Exception
+     */
+    function get_account_balance(Account $account): NativeWei
+    {
+        return $this->get_address_balance($account->get_address());
+    }
+
+    /**
      * make_amount_to_send
      *
      * @param  Account $account

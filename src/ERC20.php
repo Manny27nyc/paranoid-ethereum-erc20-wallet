@@ -126,6 +126,18 @@ final class ERC20 extends Coin implements Contract
     }
 
     /**
+     * get_account_balance
+     *
+     * @param  Account $account
+     * @return Wei
+     * @throws \Exception
+     */
+    function get_account_balance(Account $account): Wei
+    {
+        return $this->get_address_balance($account->get_address());
+    }
+
+    /**
      * make_amount_to_send
      *
      * @param  Account $account

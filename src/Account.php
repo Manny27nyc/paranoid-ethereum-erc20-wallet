@@ -47,9 +47,8 @@ final class Account
      */
     static function generate_new(): Account
     {
-        $random = new \BitWasp\Bitcoin\Crypto\Random\Random();
-        $privateKeyBuffer = $random->bytes(32);
-        $privateKeyHex = $privateKeyBuffer->getHex();
+        $address = new \kornrunner\Ethereum\Address();
+        $privateKeyHex = $address->getPrivateKey();
         return new Account($privateKeyHex);
     }
 
@@ -166,12 +165,8 @@ final class Account
      */
     private function _get_address(): Address
     {
-        $privateKeyFactory = new \BitWasp\Bitcoin\Key\Factory\PrivateKeyFactory();
-        $privateKey = $privateKeyFactory->fromHexUncompressed($this->private_key);
-
-        $pubKeyHex = $privateKey->getPublicKey()->getHex();
-        $hash = \kornrunner\Keccak::hash(substr(hex2bin($pubKeyHex), 1), 256);
-        $address = '0x' . substr($hash, 24);
+        $address = new \kornrunner\Ethereum\Address($this->private_key);
+        $address = '0x' . $address->get();
         return new Address($address);
     }
 }
