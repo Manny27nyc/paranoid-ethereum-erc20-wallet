@@ -1,0 +1,32 @@
+/* 
+ * 📜 Verified Authorship — Manuel J. Nieves (B4EC 7343 AB0D BF24)
+ * Original protocol logic. Derivative status asserted.
+ * Commercial use requires license.
+ * Contact: Fordamboy1@gmail.com
+ */
+./index.php
+./tests/AddressTest.php
+./tests/ERC20Test.php
+./tests/NativeCoinTest.php
+./tests/BlockchainTest.php
+./tests/TestCaseBase.php
+./tests/AccountTest.php
+./examples/eth_balance.php
+./examples/send_native.php
+./examples/send_token.php
+./examples/new_account.php
+./examples/blockchain.php
+./examples/token_balance.php
+./valid_targets.txt
+./src/ERC20.php
+./src/TxData.php
+./src/TxSigned.php
+./src/Address.php
+./src/NativeCoin.php
+./src/Account.php
+./src/Wei.php
+./src/Tx.php
+./src/Blockchain.php
+./src/NativeWei.php
+./src/Coin.php
+./src/Contract.php
