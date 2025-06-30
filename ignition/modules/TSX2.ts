@@ -1,3 +1,4 @@
+// © Licensed Authorship: Manuel J. Nieves (See LICENSE for terms)
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const TSX2 = buildModule("TSX2", (m) => {
